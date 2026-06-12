@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salesforce Rollout Dashboard — Samsung SDIA</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f4ff; color: #1e293b; min-height: 100vh; }
+  .header { background: #1A2456; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .header-title { font-size: 15px; font-weight: 500; color: #fff; }
+  .header-sub { font-size: 11px; color: #C8D8F8; margin-top: 3px; }
+  .header-badge { background: #0FAD74; color: #fff; font-size: 11px; font-weight: 600; padding: 5px 14px; border-radius: 20px; letter-spacing: .04em; }
+  .container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 1.25rem; }
+  .kpi-card { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 10px; padding: .9rem 1rem; }
+  .kpi-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+  .kpi-value { font-size: 22px; font-weight: 500; color: #1e293b; line-height: 1.1; }
+  .kpi-sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+  .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1.25rem; }
+  .card { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; }
+  .sec { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid #f1f5f9; }
+  .row:last-child { border-bottom: none; }
+  .row-text { flex: 1; min-width: 0; }
+  .row-title { font-size: 13px; font-weight: 500; color: #1e293b; margin-bottom: 1px; }
+  .row-sub { font-size: 11px; color: #94a3b8; }
+  .tag { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 6px; flex-shrink: 0; white-space: nowrap; }
+  .phase-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+  .bar-bg { height: 5px; background: #f1f5f9; border-radius: 99px; overflow: hidden; width: 52px; flex-shrink: 0; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; border: 0.5px solid #cbd5e1; }
+  .step-bar { height: 5px; border-radius: 99px; background: #e2e8f0; transition: background .2s; }
+  .risk-line { width: 4px; border-radius: 99px; align-self: stretch; min-height: 36px; flex-shrink: 0; }
+  .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 0.5px solid #e2e8f0; }
+  .footer p { font-size: 11px; color: #94a3b8; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 1.5rem; width: 460px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+  .modal h3 { font-size: 15px; font-weight: 500; margin-bottom: 1rem; color: #1e293b; }
+  .modal label { font-size: 12px; color: #64748b; display: block; margin: 12px 0 4px; }
+  .modal input[type=text], .modal select, .modal textarea { width: 100%; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; background: #fff; }
+  .modal textarea { resize: vertical; min-height: 60px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-save { background: #1A2456; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
+  .btn-cancel { background: none; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; color: #64748b; }
+  .btn-save:hover { background: #0f1838; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .check-row label { font-size: 13px; color: #1e293b; margin: 0; cursor: pointer; }
+  .check-row input[type=checkbox] { width: auto; cursor: pointer; accent-color: #0d7490; }
+  .intro-box { background: #fffbeb; border: 0.5px solid #fde68a; border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .ms-item { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid #f8fafc; }
+  .ms-item:last-child { border-bottom: none; }
+  .ms-item input { margin-top: 2px; cursor: pointer; accent-color: #0d7490; flex-shrink: 0; }
+  .ms-item label { font-size: 12.5px; color: #1e293b; cursor: pointer; line-height: 1.4; }
+  .ms-item label.done { color: #94a3b8; text-decoration: line-through; }
+  .ms-progress { background: #f8fafc; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .ms-progress-label { font-size: 11px; color: #64748b; }
+  .ms-progress-val { font-size: 13px; font-weight: 600; color: #1e293b; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Salesforce rollout — status update</div>
+    <div class="header-sub">Samsung SDIA · After-Sales Operations · Target full rollout: Aug 1, 2026 · Click any row to edit</div>
+  </div>
+  <span class="header-badge">On track</span>
+</div>
+
+<div class="container">
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Overall progress</div>
+      <div class="kpi-value" id="kpi-overall">0%</div>
+      <div class="kpi-sub" id="kpi-ms">0 of 29 milestones</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Vendors certified</div>
+      <div class="kpi-value" id="kpi-vendors">0 / 5</div>
+      <div class="kpi-sub">Target: Wk 3</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Customers onboarded</div>
+      <div class="kpi-value" id="kpi-customers">0 / 3</div>
+      <div class="kpi-sub">Pilot starts Wk 6</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">API integration</div>
+      <div class="kpi-value" style="font-size:18px;">June 19</div>
+      <div class="kpi-sub" style="color:#0FAD74;">On track</div>
+    </div>
+  </div>
+
+  <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:.75rem 1.25rem;margin-bottom:1.25rem;display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
+    <div style="padding-right:1rem;border-right:0.5px solid #f1f5f9;">
+      <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Phases 0–1 target</div>
+      <div style="font-size:15px;font-weight:500;color:#0d7490;">Jun 30, 2026</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Vendor readiness &amp; soft launch · Wks 1–5</div>
+    </div>
+    <div style="padding:0 1rem;border-right:0.5px solid #f1f5f9;">
+      <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Phase 2 target</div>
+      <div style="font-size:15px;font-weight:500;color:#7c3aed;">Jul 30, 2026</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Customer pilot · Wks 6–9</div>
+    </div>
+    <div style="padding-left:1rem;">
+      <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Phase 3 target</div>
+      <div style="font-size:15px;font-weight:500;color:#10b981;">Aug 1, 2026</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Full rollout + hypercare · Wks 10–13</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <div class="sec">Phase progress <span style="float:right;font-size:10px;color:#cbd5e1;font-weight:400;text-transform:none;letter-spacing:0;">click to update milestones</span></div>
+      <div id="phases-container"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec">Vendor & customer tracker <span style="float:right;font-size:10px;color:#cbd5e1;font-weight:400;text-transform:none;letter-spacing:0;">click to edit</span></div>
+      <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px;">Vendors — RNT, CKS, Spark, LSE, HJC</div>
+      <div style="display:flex;gap:10px;align-items:center;padding:0 0 6px;margin-bottom:2px;">
+        <span style="min-width:58px;"></span>
+        <div style="flex:1;display:flex;gap:16px;">
+          <span style="font-size:10px;color:#94a3b8;">Train</span>
+          <span style="font-size:10px;color:#94a3b8;">Test</span>
+          <span style="font-size:10px;color:#94a3b8;">Certify</span>
+        </div>
+      </div>
+      <div id="vendors-container"></div>
+      <div style="border-top:0.5px solid #f1f5f9;margin:12px 0 10px;"></div>
+      <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px;">Customers — AES, RWE, NextEra</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;">
+        <span style="min-width:58px;"></span>
+        <div style="flex:1;display:flex;gap:3px;">
+          <span style="flex:1;font-size:9px;color:#94a3b8;text-align:center;">Notified</span>
+          <span style="flex:1;font-size:9px;color:#94a3b8;text-align:center;">Intro</span>
+          <span style="flex:1;font-size:9px;color:#94a3b8;text-align:center;">Training</span>
+          <span style="flex:1;font-size:9px;color:#94a3b8;text-align:center;">Sandbox</span>
+          <span style="flex:1;font-size:9px;color:#94a3b8;text-align:center;">Live</span>
+        </div>
+        <span style="width:96px;"></span>
+      </div>
+      <div id="customers-container"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec">Open risks <span style="float:right;font-size:10px;color:#cbd5e1;font-weight:400;text-transform:none;letter-spacing:0;">click to edit</span></div>
+    <div id="risks-container"></div>
+  </div>
+
+  <div class="footer">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <p>Samsung SDIA · After-Sales Operations</p>
+      <span style="color:#e2e8f0;">·</span>
+      <span id="save-indicator" style="font-size:11px;color:#0FAD74;">Auto-saving</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="exportState()" style="background:#fff;border:0.5px solid #e2e8f0;border-radius:8px;padding:6px 14px;font-size:12px;color:#1e293b;cursor:pointer;font-family:inherit;">Export save file</button>
+      <label style="background:#1A2456;border-radius:8px;padding:6px 14px;font-size:12px;color:#fff;cursor:pointer;font-family:inherit;margin:0;">
+        Import save file
+        <input type="file" accept=".json" style="display:none;" onchange="importState(this.files[0])">
+      </label>
+      <button onclick="if(confirm('Reset all progress to zero?')){localStorage.removeItem('sdia_rollout_v2');localStorage.removeItem('sdia_rollout_v1');location.reload();}" style="background:#fff;border:0.5px solid #fecaca;border-radius:8px;padding:6px 14px;font-size:12px;color:#ef4444;cursor:pointer;font-family:inherit;">Reset</button>
+    </div>
+  </div>
+  <div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A2456;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-family:-apple-system,sans-serif;opacity:0;transition:opacity .4s;pointer-events:none;z-index:200;">Saved</div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Edit</h3>
+    <div id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── MILESTONE DEFINITIONS ────────────────────────────────────────────
+const MILESTONES = [
+  { phase:0, text:"Vendor training sessions scheduled for all vendors" },
+  { phase:0, text:"RNT mobile app training completed" },
+  { phase:0, text:"CKS mobile app training completed" },
+  { phase:0, text:"Spark mobile app training completed" },
+  { phase:0, text:"LSE mobile app training completed" },
+  { phase:0, text:"HJC mobile app training completed" },
+  { phase:0, text:"Field dispatch workflow testing — all vendors" },
+  { phase:0, text:"All vendors pass certification gate" },
+  { phase:0, text:"Production data & asset validation complete" },
+  { phase:1, text:"Certified vendors go live on Salesforce dispatch" },
+  { phase:1, text:"Manual dispatch backup confirmed active in parallel" },
+  { phase:1, text:"SLA monitoring live and dashboards validated" },
+  { phase:1, text:"Workflow stabilisation sign-off — no critical issues" },
+  { phase:1, text:"Phase 1 gate review completed by leadership" },
+  { phase:2, text:"Pilot customer communications sent — AES, RWE, NextEra" },
+  { phase:2, text:"Customer training sessions completed — AES, RWE, NextEra" },
+  { phase:2, text:"Sandbox trial period completed — all pilot customers" },
+  { phase:2, text:"AES, RWE, NextEra go live on Salesforce portal" },
+  { phase:2, text:"Warranty claims flowing through Salesforce" },
+  { phase:2, text:"KPI monitoring active — no SLA breaches in pilot" },
+  { phase:2, text:"Phase 2 gate review completed by leadership" },
+  { phase:3, text:"All remaining customers onboarded to portal" },
+  { phase:3, text:"RNT, CKS, Spark, LSE & HJC fully onboarded and certified" },
+  { phase:3, text:"Full automation and reporting active" },
+  { phase:3, text:"API integration with largest customer live" },
+  { phase:3, text:"Executive KPI dashboard active" },
+  { phase:3, text:"Legacy email processes retired" },
+  { phase:3, text:"Hypercare support structure confirmed active" },
+  { phase:3, text:"Rollout sign-off by leadership" },
+];
+
+const state = {
+  milestones: new Array(MILESTONES.length).fill(false),
+  phases: [
+    { num:0, label:"Vendor readiness",        timing:"Wks 1–3",  eta:"Jun 30, 2026", weight:15, color:"#0d7490", status:"Active" },
+    { num:1, label:"Vendor soft launch",      timing:"Wks 4–5",  eta:"Jun 30, 2026", weight:20, color:"#0288d1", status:"Upcoming" },
+    { num:2, label:"Customer pilot",          timing:"Wks 6–9",  eta:"Jul 30, 2026", weight:30, color:"#7c3aed", status:"Upcoming" },
+    { num:3, label:"Full rollout + hypercare",timing:"Wks 10–13",eta:"Aug 1, 2026",  weight:35, color:"#10b981", status:"Upcoming" },
+  ],
+  vendors: [
+    { name:"RNT",   train:false, test:false, cert:false },
+    { name:"CKS",   train:false, test:false, cert:false },
+    { name:"Spark", train:false, test:false, cert:false },
+    { name:"LSE",   train:false, test:false, cert:false },
+    { name:"HJC",   train:false, test:false, cert:false },
+  ],
+  customers: [
+    { name:"AES",     notified:false, introScheduled:false, introDate:"", introDone:false, training:false, sandbox:false, live:false },
+    { name:"RWE",     notified:false, introScheduled:false, introDate:"", introDone:false, training:false, sandbox:false, live:false },
+    { name:"NextEra", notified:false, introScheduled:false, introDate:"", introDone:false, training:false, sandbox:false, live:false },
+  ],
+  risks: [
+    { sev:"High",     color:"#e24b4a", bg:"#fef2f2", tc:"#991b1b", title:"Vendor training not started — LSE & HJC",  desc:"Must complete by Wk 3. Pending additional vendor licenses." },
+    { sev:"Medium",   color:"#f59e0b", bg:"#fffbeb", tc:"#92400e", title:"API integration — June 19 deadline",        desc:"On track · Dev team monitoring weekly" },
+    { sev:"High",     color:"#e24b4a", bg:"#fef2f2", tc:"#991b1b", title:"Production data validation pending",        desc:"Issue discovered with production data. Performance guarantee applied as IW service dates for legacy projects." },
+    { sev:"Resolved", color:"#10b981", bg:"#ecfdf5", tc:"#065f46", title:"Manual dispatch backup confirmed",          desc:"Parallel processes documented · Fallback ready" },
+  ]
+};
+
+// ── CALCULATIONS ─────────────────────────────────────────────────────
+function getPhasePct(phaseNum) {
+  const ms = MILESTONES.map((m,i) => ({ ...m, done: state.milestones[i] })).filter(m => m.phase === phaseNum);
+  const done = ms.filter(m => m.done).length;
+  return ms.length > 0 ? Math.round((done / ms.length) * 100) : 0;
+}
+
+function calcOverall() {
+  return Math.round(state.phases.reduce((a, p) => a + (getPhasePct(p.num) / 100) * p.weight, 0));
+}
+
+function getTotalDone() {
+  return state.milestones.filter(Boolean).length;
+}
+
+// ── KPI UPDATE ────────────────────────────────────────────────────────
+function updateKPIs() {
+  document.getElementById('kpi-overall').textContent = calcOverall() + '%';
+  document.getElementById('kpi-ms').textContent = getTotalDone() + ' of ' + MILESTONES.length + ' milestones';
+  document.getElementById('kpi-vendors').textContent = state.vendors.filter(v => v.cert).length + ' / 5';
+  document.getElementById('kpi-customers').textContent = state.customers.filter(c => c.live).length + ' / 3';
+}
+
+// ── RENDER PHASES ─────────────────────────────────────────────────────
+const statusStyles = {
+  "Active":      { bg:"#e1f5ee", color:"#0d7490" },
+  "In progress": { bg:"#e1f5ee", color:"#0d7490" },
+  "Complete":    { bg:"#ecfdf5", color:"#065f46" },
+  "Upcoming":    { bg:"#f1f5f9", color:"#64748b" },
+  "At risk":     { bg:"#fffbeb", color:"#92400e" },
+  "Blocked":     { bg:"#fef2f2", color:"#991b1b" },
+};
+
+function renderPhases() {
+  const c = document.getElementById('phases-container');
+  c.innerHTML = '';
+  state.phases.forEach((ph, i) => {
+    const pct = getPhasePct(ph.num);
+    const ms = MILESTONES.filter(m => m.phase === ph.num);
+    const done = MILESTONES.map((m,idx) => ({ ...m, done: state.milestones[idx] })).filter(m => m.phase === ph.num && m.done).length;
+    const st = statusStyles[ph.status] || statusStyles["Upcoming"];
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <div class="phase-num" style="background:${i===0?'#e1f5ee':'#f1f5f9'};color:${i===0?'#0d7490':'#94a3b8'};">${ph.num}</div>
+      <div class="row-text">
+        <div class="row-title">${ph.label}</div>
+        <div class="row-sub">${ph.timing} · <span style="color:#1e293b;font-weight:500;">ETA ${ph.eta}</span> · ${done}/${ms.length} milestones</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${ph.color};"></div></div>
+      <span class="tag" style="background:${st.bg};color:${st.color};">${pct}%</span>`;
+    row.onclick = () => openPhaseModal(i);
+    c.appendChild(row);
+  });
+}
+
+// ── RENDER VENDORS ────────────────────────────────────────────────────
+function getVendorStatus(v) {
+  if (v.cert)  return { label:"Certified",   bg:"#ecfdf5", color:"#065f46" };
+  if (v.test)  return { label:"Testing",     bg:"#e1f5ee", color:"#0d7490" };
+  if (v.train) return { label:"Training",    bg:"#eff6ff", color:"#1d4ed8" };
+  return              { label:"Not started", bg:"#f1f5f9", color:"#64748b" };
+}
+
+function renderVendors() {
+  const c = document.getElementById('vendors-container');
+  c.innerHTML = '';
+  state.vendors.forEach((v, i) => {
+    const st = getVendorStatus(v);
+    const dot = (on) => `<span class="dot" style="${on?'background:#0d7490;border:none;':''}"></span>`;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <span style="font-size:13px;font-weight:500;color:#1e293b;min-width:58px;">${v.name}</span>
+      <div style="flex:1;display:flex;gap:16px;">${dot(v.train)}${dot(v.test)}${dot(v.cert)}</div>
+      <span class="tag" style="background:${st.bg};color:${st.color};">${st.label}</span>`;
+    row.onclick = () => openVendorModal(i);
+    c.appendChild(row);
+  });
+}
+
+// ── RENDER CUSTOMERS ──────────────────────────────────────────────────
+function getCustStatus(cu) {
+  if (cu.live)           return { label:"Live",            bg:"#ecfdf5", color:"#065f46" };
+  if (cu.sandbox)        return { label:"Sandbox",         bg:"#e1f5ee", color:"#0d7490" };
+  if (cu.training)       return { label:"Training",        bg:"#eff6ff", color:"#1d4ed8" };
+  if (cu.introDone)      return { label:"Intro complete",  bg:"#e1f5ee", color:"#0d7490" };
+  if (cu.introScheduled) return { label:"Intro scheduled", bg:"#fffbeb", color:"#92400e" };
+  if (cu.notified)       return { label:"Notified",        bg:"#f0f9ff", color:"#0369a1" };
+  return                        { label:"Pending",         bg:"#f1f5f9", color:"#64748b" };
+}
+
+function renderCustomers() {
+  const c = document.getElementById('customers-container');
+  c.innerHTML = '';
+  state.customers.forEach((cu, i) => {
+    const st = getCustStatus(cu);
+    const introLabel = cu.introDate
+      ? `<span style="font-size:10px;color:#92400e;margin-left:4px;">${cu.introDate}</span>`
+      : (cu.introScheduled ? `<span style="font-size:10px;color:#92400e;margin-left:4px;">TBD</span>` : '');
+    const bar = (on, scheduled) => {
+      let bg = on ? '#0288d1' : '#e2e8f0';
+      if (!on && scheduled) bg = '#fde68a';
+      return `<div class="step-bar" style="flex:1;background:${bg};"></div>`;
+    };
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <span style="font-size:13px;font-weight:500;color:#1e293b;min-width:58px;">${cu.name}</span>
+      <div style="flex:1;display:flex;gap:3px;align-items:center;">
+        ${bar(cu.notified,false)}
+        ${bar(cu.introDone,cu.introScheduled)}
+        ${bar(cu.training,false)}
+        ${bar(cu.sandbox,false)}
+        ${bar(cu.live,false)}
+        ${introLabel}
+      </div>
+      <span class="tag" style="background:${st.bg};color:${st.color};min-width:96px;text-align:center;">${st.label}</span>`;
+    row.onclick = () => openCustomerModal(i);
+    c.appendChild(row);
+  });
+}
+
+// ── RENDER RISKS ──────────────────────────────────────────────────────
+function renderRisks() {
+  const c = document.getElementById('risks-container');
+  c.innerHTML = '';
+  state.risks.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <div class="risk-line" style="background:${r.color};"></div>
+      <div class="row-text">
+        <div class="row-title">${r.title}</div>
+        <div class="row-sub">${r.desc}</div>
+      </div>
+      <span class="tag" style="background:${r.bg};color:${r.tc};">${r.sev}</span>`;
+    row.onclick = () => openRiskModal(i);
+    c.appendChild(row);
+  });
+}
+
+// ── SAVE / LOAD ───────────────────────────────────────────────────────
+function saveState() {
+  try { localStorage.setItem('sdia_rollout_v2', JSON.stringify(state)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('sdia_rollout_v2');
+    if (saved) {
+      const s = JSON.parse(saved);
+      // Only restore if it has the new milestones array
+      if (s.milestones && Array.isArray(s.milestones) && s.milestones.length === MILESTONES.length) {
+        state.milestones = s.milestones;
+        if (s.phases)    state.phases    = s.phases;
+        if (s.vendors)   state.vendors   = s.vendors;
+        if (s.customers) state.customers = s.customers;
+        if (s.risks)     state.risks     = s.risks;
+      }
+    }
+    // Clear old stale format if present
+    localStorage.removeItem('sdia_rollout_v1');
+  } catch(e) {}
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rollout_dashboard_save_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function importState(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const s = JSON.parse(e.target.result);
+      if (s.milestones) state.milestones = s.milestones;
+      if (s.phases)     state.phases     = s.phases;
+      if (s.vendors)    state.vendors    = s.vendors;
+      if (s.customers)  state.customers  = s.customers;
+      if (s.risks)      state.risks      = s.risks;
+      saveState(); renderAll();
+      showToast('Save file loaded successfully');
+    } catch(err) { alert('Could not load file — please check it is a valid dashboard save.'); }
+  };
+  reader.readAsText(file);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+function renderAll() {
+  renderPhases(); renderVendors(); renderCustomers(); renderRisks(); updateKPIs();
+  saveState();
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────
+let modalSave = null;
+function openModal(title, bodyHTML, saveFn) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHTML;
+  modalSave = saveFn;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  modalSave = null;
+}
+function saveModal() {
+  if (modalSave) modalSave();
+  closeModal();
+  renderAll();
+  showToast('Changes saved');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+function openPhaseModal(i) {
+  const ph = state.phases[i];
+  const phaseMilestones = MILESTONES.map((m, idx) => ({ ...m, idx, done: state.milestones[idx] })).filter(m => m.phase === ph.num);
+  const done = phaseMilestones.filter(m => m.done).length;
+  const pct = Math.round((done / phaseMilestones.length) * 100);
+
+  const msHTML = phaseMilestones.map(m => `
+    <div class="ms-item">
+      <input type="checkbox" id="ms-${m.idx}" ${m.done ? 'checked' : ''} onchange="toggleMilestone(${m.idx}, this.checked)">
+      <label for="ms-${m.idx}" class="${m.done ? 'done' : ''}">${m.text}</label>
+    </div>`).join('');
+
+  openModal(`Phase ${ph.num} — ${ph.label}`, `
+    <div style="background:#f8fafc;border-radius:8px;padding:10px 12px;margin-bottom:4px;font-size:12px;color:#64748b;">
+      Target ETA: <strong style="color:#1e293b;">${ph.eta}</strong> &nbsp;·&nbsp; ${ph.timing}
+    </div>
+    <div class="ms-progress">
+      <span class="ms-progress-label">Phase progress (auto-calculated)</span>
+      <span class="ms-progress-val" id="modal-pct">${pct}% &nbsp;·&nbsp; ${done}/${phaseMilestones.length} milestones</span>
+    </div>
+    <label>Status</label>
+    <select id="m-status">
+      ${["Upcoming","Active","In progress","At risk","Complete","Blocked"].map(s => `<option ${s===ph.status?'selected':''}>${s}</option>`).join('')}
+    </select>
+    <label style="margin-top:14px;">Milestones — tick as complete</label>
+    ${msHTML}
+  `, () => {
+    state.phases[i].status = document.getElementById('m-status').value;
+  });
+}
+
+function toggleMilestone(idx, checked) {
+  state.milestones[idx] = checked;
+  // Update label style inline
+  const lbl = document.querySelector(`label[for="ms-${idx}"]`);
+  if (lbl) lbl.className = checked ? 'done' : '';
+  // Update modal progress display
+  const ph = MILESTONES[idx].phase;
+  const phaseMilestones = MILESTONES.map((m, i) => ({ ...m, done: state.milestones[i] })).filter(m => m.phase === ph);
+  const done = phaseMilestones.filter(m => m.done).length;
+  const pct = Math.round((done / phaseMilestones.length) * 100);
+  const el = document.getElementById('modal-pct');
+  if (el) el.textContent = `${pct}% · ${done}/${phaseMilestones.length} milestones`;
+  // Live update KPIs and phase bars without closing modal
+  updateKPIs();
+  renderPhases();
+  saveState();
+}
+
+function openVendorModal(i) {
+  const v = state.vendors[i];
+  openModal(`Vendor — ${v.name}`, `
+    <div class="check-row"><input type="checkbox" id="m-train" ${v.train?'checked':''}><label for="m-train">Training completed</label></div>
+    <div class="check-row"><input type="checkbox" id="m-test" ${v.test?'checked':''}><label for="m-test">Dispatch testing completed</label></div>
+    <div class="check-row"><input type="checkbox" id="m-cert" ${v.cert?'checked':''}><label for="m-cert">Certification gate passed</label></div>
+  `, () => {
+    state.vendors[i].train = document.getElementById('m-train').checked;
+    state.vendors[i].test  = document.getElementById('m-test').checked;
+    state.vendors[i].cert  = document.getElementById('m-cert').checked;
+  });
+}
+
+function openCustomerModal(i) {
+  const cu = state.customers[i];
+  openModal(`Customer — ${cu.name}`, `
+    <div class="check-row"><input type="checkbox" id="m-notified" ${cu.notified?'checked':''}><label for="m-notified">Notified</label></div>
+    <div class="intro-box">
+      <label style="font-size:12px;font-weight:600;color:#92400e;margin:0 0 6px;display:block;">Introduction session</label>
+      <div class="check-row"><input type="checkbox" id="m-intro-sched" ${cu.introScheduled?'checked':''}><label for="m-intro-sched">Introduction scheduled</label></div>
+      <label style="color:#92400e;">Scheduled date</label>
+      <input type="text" id="m-intro-date" value="${cu.introDate}" placeholder="e.g. June 25, 2026">
+      <div class="check-row" style="margin-top:8px;"><input type="checkbox" id="m-intro-done" ${cu.introDone?'checked':''}><label for="m-intro-done">Introduction completed</label></div>
+    </div>
+    <div class="check-row"><input type="checkbox" id="m-training" ${cu.training?'checked':''}><label for="m-training">Training completed</label></div>
+    <div class="check-row"><input type="checkbox" id="m-sandbox" ${cu.sandbox?'checked':''}><label for="m-sandbox">Sandbox trial complete (~2 weeks)</label></div>
+    <div class="check-row"><input type="checkbox" id="m-live" ${cu.live?'checked':''}><label for="m-live">Live on Salesforce portal</label></div>
+  `, () => {
+    state.customers[i].notified       = document.getElementById('m-notified').checked;
+    state.customers[i].introScheduled = document.getElementById('m-intro-sched').checked;
+    state.customers[i].introDate      = document.getElementById('m-intro-date').value;
+    state.customers[i].introDone      = document.getElementById('m-intro-done').checked;
+    state.customers[i].training       = document.getElementById('m-training').checked;
+    state.customers[i].sandbox        = document.getElementById('m-sandbox').checked;
+    state.customers[i].live           = document.getElementById('m-live').checked;
+  });
+}
+
+function openRiskModal(i) {
+  const r = state.risks[i];
+  const sevMap = {
+    High:     { color:"#e24b4a", bg:"#fef2f2", tc:"#991b1b" },
+    Medium:   { color:"#f59e0b", bg:"#fffbeb", tc:"#92400e" },
+    Low:      { color:"#0288d1", bg:"#eff6ff", tc:"#1d4ed8" },
+    Resolved: { color:"#10b981", bg:"#ecfdf5", tc:"#065f46" },
+  };
+  openModal(`Risk`, `
+    <label>Title</label>
+    <input type="text" id="m-rtitle" value="${r.title}">
+    <label>Description</label>
+    <textarea id="m-rdesc">${r.desc}</textarea>
+    <label>Severity</label>
+    <select id="m-rsev">
+      ${["High","Medium","Low","Resolved"].map(s=>`<option ${s===r.sev?'selected':''}>${s}</option>`).join('')}
+    </select>
+  `, () => {
+    const sev = document.getElementById('m-rsev').value;
+    Object.assign(state.risks[i], sevMap[sev], {
+      sev,
+      title: document.getElementById('m-rtitle').value,
+      desc:  document.getElementById('m-rdesc').value,
+    });
+  });
+}
+
+loadState();
+renderAll();
+</script>
+</body>
+</html>
